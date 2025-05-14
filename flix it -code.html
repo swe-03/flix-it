@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Movie Tinder - Swipe to Discover Movies</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #141e30, #243b55);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+  }
+  header {
+    padding: 1rem;
+    font-weight: 600;
+    font-size: 1.8rem;
+    letter-spacing: 0.05em;
+    text-align: center;
+    user-select: none;
+  }
+  .card-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    perspective: 1500px;
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    margin: 1rem 0;
+  }
+  .movie-card {
+    position: absolute;
+    width: 100%;
+    max-width: 400px;
+    height: 560px;
+    border-radius: 20px;
+    background: #222831;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+    user-select: none;
+    cursor: grab;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: box-shadow 0.3s ease;
+  }
+  .movie-card:active {
+    cursor: grabbing;
+  }
+  .movie-poster {
+    flex: 1.5;
+    background-size: cover;
+    background-position: center center;
+    border-bottom: 3px solid #00adb5;
+    border-radius: 20px 20px 0 0;
+  }
+  .movie-info {
+    flex: 1;
+    padding: 1rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .movie-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0;
+    color: #00adb5;
+  }
+  .movie-genre {
+    font-size: 0.9rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    margin: 0.2rem 0 1rem 0;
+    color: #eeeeeebb;
+    text-transform: uppercase;
+  }
+  .movie-description {
+    font-size: 1rem;
+    line-height: 1.4;
+    flex: 1;
+    color: #ccc;
+    overflow-y: auto;
+  }
+  .buttons {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+  }
+  button {
+    background: none;
+    border: 3px solid #00adb5;
+    color: #00adb5;
+    font-size: 1.5rem;
+    font-weight: 700;
+    padding: 0.5rem 1.6rem;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    user-select: none;
+  }
+  button:hover {
+    background: #00adb5;
+    color: #222831;
+  }
+  .liked-list {
+    background: #222831dd;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    max-width: 400px;
+    margin-bottom: 1rem;
+    max-height: 150px;
+    overflow-y: auto;
+    font-size: 1rem;
+  }
+  .liked-list h2 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #00adb5;
+    font-size: 1.2rem;
+    text-align: center;
+  }
+  .liked-movie {
+    color: #eee;
+    margin-left: 0.5rem;
+  }
+  /* Swipe overlay labels */
+  .like-label, .dislike-label {
+    position: absolute;
+    top: 40px;
+    font-size: 3rem;
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    user-select: none;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .like-label {
+    left: 40px;
+    color: #00ff99;
+    border: 4px solid #00ff99;
+  }
+  .dislike-label {
+    right: 40px;
+    color: #ff4d6d;
+    border: 4px solid #ff4d6d;
+  }
+  /* Scrollbar for description */
+  .movie-description::-webkit-scrollbar {
+    width: 8px;
+  }
+  .movie-description::-webkit-scrollbar-thumb {
+    background-color: #00adb5aa;
+    border-radius: 4px;
+  }
+  @media (max-width: 440px) {
+    .movie-card {
+      height: 520px;
+      max-width: 90vw;
+    }
+  }
+</style>
+</head>
+<body>
+<header> 🎬 Flixlt</header>
+<div class="card-container" id="card-container">
+  <!-- Cards rendered by JS -->
+</div>
+<div class="buttons">
+  <button id="dislikeBtn" title="Dislike">&#x2717;</button>
+  <button id="likeBtn" title="Like">&#10084;</button>
+</div>
+<div class="liked-list" id="likedList" style="display:none;">
+  <h2>Movies You Liked</h2>
+  <div id="likedMovies"></div>
+</div>
+<script>
+  const movies = [
+    {
+      title: "Inception",
+      genre: "Sci-Fi, Thriller",
+      description: "A skilled thief who steals secrets through dream-sharing technology is given a final job to implant an idea into a CEO's mind.",
+      poster: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTjK29-JsgC5qb-RLuRsd1fk4fEy21-VwtDNA&s"
+    },
+    {
+      title: "The Godfather",
+      genre: "Crime, Drama",
+      description: "The aging patriarch of an organized crime dynasty transfers control of his clandestine empire to his reluctant son.",
+      poster: "https://image.tmdb.org/t/p/w400/iVZ3JAcAjmguGPnRNfWFOtLHOuY.jpg"
+    },
+    {
+      title: "La La Land",
+      genre: "Drama, Music, Romance",
+      description: "While navigating their careers in Los Angeles, a musician and an aspiring actress fall in love but face challenges.",
+      poster: "https://image.tmdb.org/t/p/w400/uDO8zWDhfWwoFdKS4fzkUJt0Rf0.jpg"
+    },
+    {
+      title: "Avengers: Endgame",
+      genre: "Action, Adventure, Sci-Fi",
+      description: "The Avengers assemble once more to undo the damage caused by Thanos and restore balance to the universe.",
+      poster: "https://image.tmdb.org/t/p/w400/or06FN3Dka5tukK1e9sl16pB3iy.jpg"
+    },
+    {
+      title: "Parasite",
+      genre: "Drama, Thriller",
+      description: "A poor family schemes to become employed by a wealthy family by infiltrating their household and posing as unrelated, highly qualified individuals.",
+      poster: "https://image.tmdb.org/t/p/w400/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg"
+    },
+    {
+      title: "The Dark Knight",
+      genre: "Action, Crime, Drama",
+      description: "Batman faces the Joker, a criminal mastermind who wants to plunge Gotham City into anarchy.",
+      poster: "https://image.tmdb.org/t/p/w400/qJ2tW6WMUDux911r6m7haRef0WH.jpg"
+    }
+  ];
+
+  const cardContainer = document.getElementById('card-container');
+  const likedListDiv = document.getElementById('likedList');
+  const likedMoviesDiv = document.getElementById('likedMovies');
+  const dislikeBtn = document.getElementById('dislikeBtn');
+  const likeBtn = document.getElementById('likeBtn');
+
+  let currentIndex = 0;
+  let likedMovies = [];
+
+  function createCard(movie, index) {
+    const card = document.createElement('div');
+    card.className = 'movie-card';
+    card.style.zIndex = movies.length - index;
+    card.style.transform = 'translate(0,0) rotate(0deg)';
+    card.dataset.index = index;
+
+    const likeLabel = document.createElement('div');
+    likeLabel.className = 'like-label';
+    likeLabel.textContent = 'LIKE';
+    card.appendChild(likeLabel);
+
+    const dislikeLabel = document.createElement('div');
+    dislikeLabel.className = 'dislike-label';
+    dislikeLabel.textContent = 'NOPE';
+    card.appendChild(dislikeLabel);
+
+    const poster = document.createElement('div');
+    poster.className = 'movie-poster';
+    poster.style.backgroundImage = `url(${movie.poster})`;
+    card.appendChild(poster);
+
+    const info = document.createElement('div');
+    info.className = 'movie-info';
+
+    const title = document.createElement('h3');
+    title.className = 'movie-title';
+    title.textContent = movie.title;
+    info.appendChild(title);
+
+    const genre = document.createElement('p');
+    genre.className = 'movie-genre';
+    genre.textContent = movie.genre;
+    info.appendChild(genre);
+
+    const desc = document.createElement('p');
+    desc.className = 'movie-description';
+    desc.textContent = movie.description;
+    info.appendChild(desc);
+
+    card.appendChild(info);
+
+    addSwipeListeners(card);
+
+    return card;
+  }
+
+  function addSwipeListeners(card) {
+    let startX, startY, currentX, currentY, isDragging = false;
+    let currentRotation = 0;
+
+    function onDragStart(evt) {
+      evt.preventDefault();
+      if (evt.type === 'touchstart') {
+        startX = evt.touches[0].clientX;
+        startY = evt.touches[0].clientY;
+      } else {
+        startX = evt.clientX;
+        startY = evt.clientY;
+      }
+      isDragging = true;
+      card.style.transition = 'none';
+    }
+    function onDragMove(evt) {
+      if (!isDragging) return;
+      if (evt.type === 'touchmove') {
+        currentX = evt.touches[0].clientX;
+        currentY = evt.touches[0].clientY;
+      } else {
+        currentX = evt.clientX;
+        currentY = evt.clientY;
+      }
+      const dx = currentX - startX;
+      const dy = currentY - startY;
+      currentRotation = dx / 15;
+
+      card.style.transform = `translate(${dx}px, ${dy}px) rotate(${currentRotation}deg)`;
+
+      const likeLabel = card.querySelector('.like-label');
+      const dislikeLabel = card.querySelector('.dislike-label');
+
+      if (dx > 50) {
+        likeLabel.style.opacity = 1;
+        dislikeLabel.style.opacity = 0;
+      } else if (dx < -50) {
+        dislikeLabel.style.opacity = 1;
+        likeLabel.style.opacity = 0;
+      } else {
+        likeLabel.style.opacity = 0;
+        dislikeLabel.style.opacity = 0;
+      }
+    }
+    function onDragEnd(evt) {
+      if (!isDragging) return;
+      isDragging = false;
+      const dx = currentX - startX;
+
+      const threshold = 100;
+      if (dx > threshold) {
+        // Like
+        swipeOut(card, 'right');
+        likedMovies.push(movies[currentIndex]);
+        currentIndex++;
+        showNextCard();
+      } else if (dx < -threshold) {
+        // Dislike
+        swipeOut(card, 'left');
+        currentIndex++;
+        showNextCard();
+      } else {
+        // Return to center
+        card.style.transition = 'transform 0.3s ease';
+        card.style.transform = 'translate(0,0) rotate(0deg)';
+        card.querySelector('.like-label').style.opacity = 0;
+        card.querySelector('.dislike-label').style.opacity = 0;
+      }
+    }
+
+    card.addEventListener('mousedown', onDragStart);
+    card.addEventListener('touchstart', onDragStart);
+
+    window.addEventListener('mousemove', onDragMove);
+    window.addEventListener('touchmove', onDragMove);
+
+    window.addEventListener('mouseup', onDragEnd);
+    window.addEventListener('touchend', onDragEnd);
+  }
+
+  function swipeOut(card, direction) {
+    card.style.transition = 'transform 0.5s ease-out, opacity 0.5s ease-out';
+    const xOffset = direction === 'right' ? 1000 : -1000;
+    card.style.transform = `translate(${xOffset}px, 100px) rotate(${direction === 'right'? 30 : -30}deg)`;
+    card.style.opacity = '0';
+    setTimeout(() => {
+      card.remove();
+      if (currentIndex >= movies.length) {
+        showLikedMovies();
+      }
+    }, 500);
+  }
+
+  function showNextCard() {
+    // Already handled by removing current card and rendering new cards at init
+    // No additional action needed here
+  }
+
+  function renderCards() {
+    cardContainer.innerHTML = '';
+    for (let i = currentIndex; i < movies.length; i++) {
+      const card = createCard(movies[i], i);
+      cardContainer.appendChild(card);
+    }
+    if (currentIndex >= movies.length) {
+      showLikedMovies();
+    }
+  }
+
+  function showLikedMovies() {
+    cardContainer.innerHTML = '';
+    dislikeBtn.disabled = true;
+    likeBtn.disabled = true;
+    likedListDiv.style.display = 'block';
+    likedMoviesDiv.innerHTML = '';
+
+    if (likedMovies.length === 0) {
+      likedMoviesDiv.textContent = 'You didn\'t like any movies.';
+      return;
+    }
+
+    likedMovies.forEach(movie => {
+      const div = document.createElement('div');
+      div.className = 'liked-movie';
+      div.textContent = movie.title;
+      likedMoviesDiv.appendChild(div);
+    });
+  }
+
+  dislikeBtn.onclick = () => {
+    if (currentIndex >= movies.length) return;
+    const card = cardContainer.querySelector('.movie-card');
+    if (!card) return;
+    swipeOut(card, 'left');
+    currentIndex++;
+    showNextCard();
+  };
+
+  likeBtn.onclick = () => {
+    if (currentIndex >= movies.length) return;
+    const card = cardContainer.querySelector('.movie-card');
+    if (!card) return;
+    swipeOut(card, 'right');
+    likedMovies.push(movies[currentIndex]);
+    currentIndex++;
+    showNextCard();
+  };
+      // Initial render
+  renderCards();
+</script>
+</body>
+</html>
